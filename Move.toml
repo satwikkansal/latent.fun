@@ -1,0 +1,16 @@
+[package]
+name = "latent"
+version = "1.0.0"
+authors = []
+
+[addresses]
+talent_show_addr = "1fd2ada641c9711e2bd7a9fb0ddd5ea2f535d8331eff349ad788af51488c31bc"
+
+[dev-addresses]
+
+[dependencies.AptosFramework]
+git = "https://github.com/aptos-labs/aptos-framework.git"
+rev = "testnet"
+subdir = "aptos-framework"
+
+[dev-dependencies]
