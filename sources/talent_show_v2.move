@@ -1,4 +1,4 @@
-module talent_show_addr::talent_show {
+module talent_show_addr::talent_show_v2 {
     use std::string::String;
     use std::vector;
     use aptos_framework::coin::{Self, Coin};
@@ -20,7 +20,7 @@ module talent_show_addr::talent_show {
 
     // Constants
     const PLATFORM_FEE_PERCENTAGE: u64 = 5;
-    const REQUIRED_STAKE_AMOUNT: u64 = 100; // Fixed stake amount
+    const REQUIRED_STAKE_AMOUNT: u64 = 10; // Fixed stake amount
     const VOTING_WINDOW_DURATION: u64 = 86400; // 24 hours in seconds
 
     struct Performance has store {
@@ -49,57 +49,58 @@ module talent_show_addr::talent_show {
     }
 
     // Submit a new performance
-    public fun submit_performance(
-        performer: &signer,
-        video_link: String,
-        self_score: u64,
-        stake_amount: Coin<AptosCoin>
-    ) acquires TalentShow {
-        assert!(coin::value(&stake_amount) == REQUIRED_STAKE_AMOUNT, E_INSUFFICIENT_STAKE);
+public entry fun submit_performance(
+    performer: &signer,
+    video_link: String,
+    self_score: u64,
+) acquires TalentShow {
+    // Withdraw the stake amount directly in the function
+    let stake_amount = coin::withdraw<AptosCoin>(performer, REQUIRED_STAKE_AMOUNT);
 
-        let show = borrow_global_mut<TalentShow>(@talent_show_addr);
-        let performance_id = show.performance_counter + 1;
+    let show = borrow_global_mut<TalentShow>(@talent_show_addr);
+    let performance_id = show.performance_counter + 1;
 
-        let performance = Performance {
-            performer: signer::address_of(performer),
-            video_link: video_link,
-            self_score: self_score,
-            total_stake: stake_amount,
-            judges_scores: vector::empty(),
-            audience_scores: table::new(),
-            voting_start_time: timestamp::now_seconds(),
-            is_completed: false,
-            pot_claimed: false,
-            judge_votes: vector::empty()
-        };
+    let performance = Performance {
+        performer: signer::address_of(performer),
+        video_link,
+        self_score,
+        total_stake: stake_amount,
+        judges_scores: vector::empty(),
+        audience_scores: table::new(),
+        voting_start_time: timestamp::now_seconds(),
+        is_completed: false,
+        pot_claimed: false,
+        judge_votes: vector::empty()
+    };
 
-        table::add(&mut show.performances, performance_id, performance);
-        show.performance_counter = performance_id;
-    }
+    table::add(&mut show.performances, performance_id, performance);
+    show.performance_counter = performance_id;
+}
 
-    // Submit audience score
-    public fun submit_audience_score(
-        audience: &signer,
-        performance_id: u64,
-        score: u64,
-        stake: Coin<AptosCoin>
-    ) acquires TalentShow {
-        let show = borrow_global_mut<TalentShow>(@talent_show_addr);
-        let performance = table::borrow_mut(&mut show.performances, performance_id);
+// Submit audience score
+public entry fun submit_audience_score(
+    audience: &signer,
+    performance_id: u64,
+    score: u64,
+) acquires TalentShow {
+    // Withdraw the stake amount directly in the function
+    let stake = coin::withdraw<AptosCoin>(audience, REQUIRED_STAKE_AMOUNT);
 
-        assert!(!performance.is_completed, E_VOTING_WINDOW_EXPIRED);
-        assert!(timestamp::now_seconds() <= performance.voting_start_time + VOTING_WINDOW_DURATION, E_VOTING_WINDOW_EXPIRED);
-        assert!(coin::value(&stake) == REQUIRED_STAKE_AMOUNT, E_INSUFFICIENT_STAKE);
+    let show = borrow_global_mut<TalentShow>(@talent_show_addr);
+    let performance = table::borrow_mut(&mut show.performances, performance_id);
 
-        let audience_addr = signer::address_of(audience);
-        assert!(!table::contains(&performance.audience_scores, audience_addr), E_ALREADY_VOTED);
+    assert!(!performance.is_completed, E_VOTING_WINDOW_EXPIRED);
+    assert!(timestamp::now_seconds() <= performance.voting_start_time + VOTING_WINDOW_DURATION, E_VOTING_WINDOW_EXPIRED);
 
-        table::add(&mut performance.audience_scores, audience_addr, score);
-        coin::merge(&mut performance.total_stake, stake);
-    }
+    let audience_addr = signer::address_of(audience);
+    assert!(!table::contains(&performance.audience_scores, audience_addr), E_ALREADY_VOTED);
+
+    table::add(&mut performance.audience_scores, audience_addr, score);
+    coin::merge(&mut performance.total_stake, stake);
+}
 
     // Initialize the talent show
-    public fun initialize(account: &signer, judges: vector<address>) {
+    public entry fun initialize(account: &signer, judges: vector<address>) {
         let show = TalentShow {
             performances: table::new(),
             judges: judges,
@@ -128,7 +129,7 @@ module talent_show_addr::talent_show {
     }
 
     // Distribute rewards
-    public fun distribute_rewards(performance_id: u64) acquires TalentShow {
+    public entry fun distribute_rewards(performance_id: u64) acquires TalentShow {
         let show = borrow_global_mut<TalentShow>(@talent_show_addr);
         let performance = table::borrow_mut(&mut show.performances, performance_id);
 
@@ -164,7 +165,7 @@ module talent_show_addr::talent_show {
         coin::value(&performance.total_stake)
     }
 
-    public fun submit_judge_score(
+    public entry fun submit_judge_score(
     judge: &signer,
     performance_id: u64,
     score: u64
