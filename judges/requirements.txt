@@ -1,0 +1,5 @@
+aptos-sdk==0.10.0
+fastapi
+python-dotenv
+pydantic
+uvicorn
