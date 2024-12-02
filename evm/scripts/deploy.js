@@ -11,10 +11,36 @@ async function main() {
   ];
 
   const TalentShow = await ethers.getContractFactory("TalentShow");
-  const talentShow = await TalentShow.deploy(judges);
+
+  // Deploy with both required constructor arguments
+  const talentShow = await TalentShow.deploy(
+    deployer.address,  // initialOwner
+    judges            // judges array
+  );
+
   await talentShow.deployed();
 
   console.log("TalentShow deployed to:", talentShow.address);
+  console.log("Owner:", deployer.address);
+  console.log("Judges:", judges);
+
+  // Verify contract
+  console.log("Waiting for block confirmations...");
+  await talentShow.deployTransaction.wait(6); // wait for 6 block confirmations
+
+  console.log("Verifying contract...");
+  try {
+    await run("verify:verify", {
+      address: talentShow.address,
+      constructorArguments: [deployer.address, judges],
+    });
+  } catch (e) {
+    if (e.message.toLowerCase().includes("already verified")) {
+      console.log("Already verified!");
+    } else {
+      console.error("Error verifying contract:", e);
+    }
+  }
 }
 
 main()

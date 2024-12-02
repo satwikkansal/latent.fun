@@ -11,12 +11,22 @@ module.exports = {
       url: "https://sepolia.base.org",
     }
     },
-    baseGoerli: {
+    sepolia: {
       url: process.env.BASE_GOERLI_RPC,
       accounts: [process.env.PRIVATE_KEY],
     },
   },
   etherscan: {
     apiKey: process.env.ETHERSCAN_API_KEY,
+    customChains: [
+    {
+      network: "sepolia",
+      chainId: 84325,
+      urls: {
+        apiURL: "https://sepolia.basescan.io/api",
+        browserURL: "https://sepolia.etherscan.io"
+      }
+    }
+  ]
   },
 };
